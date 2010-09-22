@@ -1,0 +1,24 @@
+NAME
+    RDF::Crypt - semantic cryptography
+
+DESCRIPTION
+    This module provides a variety of objects and methods for
+    cryptographically manipulating (encrypting, decrypting, signing and
+    verifying) RDF graphs using RSA and WebID.
+
+SEE ALSO
+    RDF::Crypt::Encrypter, RDF::Crypt::Decrypter, RDF::Crypt::Signer,
+    RDF::Crypt::Verifier.
+
+BUGS
+    Please report any bugs to <http://rt.cpan.org/>.
+
+AUTHOR
+    Toby Inkster <tobyink@cpan.org>.
+
+COPYRIGHT
+    Copyright 2010 Toby Inkster
+
+    This library is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
