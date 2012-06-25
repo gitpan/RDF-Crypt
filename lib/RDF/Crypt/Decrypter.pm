@@ -1,34 +1,32 @@
 package RDF::Crypt::Decrypter;
 
-use 5.008;
-use base qw[RDF::Crypt::PrivateKeyFunction RDF::Crypt::Encrypter];
-use common::sense;
+use 5.010;
+use Any::Moose;
+with qw(
+	RDF::Crypt::Role::WithPrivateKey
+	RDF::Crypt::Role::DoesDecrypt
+	RDF::Crypt::Role::DoesEncrypt
+	RDF::Crypt::Role::ToString
+);
 
-use Carp qw[];
-use Digest::SHA1 qw[];
-use MIME::Base64 qw[];
-use RDF::TrineShortcuts qw[];
+use MIME::Base64 qw(
+	decode_base64
+	encode_base64
+);
 
-our $VERSION = '0.001';
+use namespace::clean;
 
-# inherit this from Encrypter, but can't use it.
-sub new_from_pubkey
-{
-	Carp::croak("Can't create a Decrypter from a public key.");
+BEGIN {
+	$RDF::Crypt::Decrypter::AUTHORITY = 'cpan:TOBYINK';
+	$RDF::Crypt::Decrypter::VERSION   = '0.002';
 }
 
-# inherit this from Encrypter, but can't use it.
-sub new_from_webid
-{
-	Carp::croak("Can't create a Decrypter from a WebID.");
-}
-
-sub decrypt_text
+sub decrypt_bytes
 {
 	my ($self, $text) = @_;
-	$text = MIME::Base64::decode_base64($text);
+	$text = decode_base64($text);
 	
-	my $key = $self->{privkey};
+	my $key = $self->private_key;
 	my $block_size = $key->size - 16;
 		
 	my $iv = substr($text, 0, $block_size);
@@ -57,73 +55,67 @@ sub decrypt_text
 	return substr($text, 0, (length $text) - $removal_chars);
 }
 
-sub decrypt_model
-{
-	my ($self, $text, %opts) = @_;
-	return RDF::TrineShortcuts::rdf_parse($self->decrypt_text($text), %opts);
-}
-
-sub encrypt_text
+sub encrypt_bytes
 {
 	my ($self, $text) = @_;
-	return MIME::Base64::encode_base64($self->{privkey}->private_encrypt($text));
+	encode_base64(
+		$self->private_key->private_encrypt($text)
+	);
 }
 
 1;
 
+__END__
+
 =head1 NAME
 
-RDF::Crypt::Decrypter - decryptes encrypted RDF graphs
+RDF::Crypt::Decrypter - decrypts encrypted RDF graphs
+
+=head1 SYNOPSIS
+
+ use 5.010;
+ use File::Slurp qw< slurp >;
+ use RDF::Crypt::Decrypter;
+ 
+ my $dec = RDF::Crypt::Decrypter->new_from_file(
+    '/path/to/private-key.pem'
+ );
+ 
+ my $scrambled = slurp '/path/to/secret.rdf-crypt';
+ my $graph     = $dec->decrypt_model($scrambled);
 
 =head1 DESCRIPTION
 
 A Decrypter object is created using an RSA private key.
 
-RDF::Crypt::Decrypter is a subclass of RDF::Crypt::Encrypter, and can thus
-also be used to encrypt graphs for yourself, using just your private key. See
-L<RDF::Crypt::Encrypter> for details of the encryption methods.
+RDF::Crypt::Decrypter can also also be used to encrypt graphs for yourself,
+using just your private key.
 
-=head2 Constructors
-
-=over
-
-=item C<< new_from_file($file) >>
-
-Given a filename containing a DER or PEM encoded RSA private key, constructs
-a Decrypter object.
-
-=item C<< new_from_string($str) >>
-
-Given a string containing a DER or PEM encoded RSA private key, constructs
-a Decrypter object.
-
-=item C<< new_from_privkey($key) >>
-
-Given a L<Crypt::OpenSSL::RSA> private key object, constructs a Decrypter object.
-
-=back
-
-=head2 Object Methods
+=head2 Roles
 
 =over
 
-=item C<< decrypt_model($text, %opts) >>
+=item * L<RDF::Crypt::Role::WithPublicKeys>
 
-Given a string that represents an encrypted RDF graph, decrypts and
-parses it. Any options are passed along to L<RDF::TrineShortcuts>'
-C<rdf_parse> function.
+=item * L<RDF::Crypt::Role::DoesDecrypt>
 
-Returns an L<RDF::Trine::Model>.
+=item * L<RDF::Crypt::Role::DoesEncrypt>
 
-=item C<< decrypt_text($str) >>
-
-Bonus method - decrypts a literal string which may or may not have anything
-to do with RDF.
+=item * L<RDF::Crypt::Role::ToString>
 
 =back
+
+=begin trustme
+
+=item * encrypt_bytes
+
+=item * decrypt_bytes
+
+=end trustme
 
 =head1 SEE ALSO
 
+L<RDF::Crypt>,
 L<RDF::Crypt::Encrypter>.
 
 =head1 BUGS
@@ -136,9 +128,14 @@ Toby Inkster E<lt>tobyink@cpan.orgE<gt>.
 
 =head1 COPYRIGHT
 
-Copyright 2010 Toby Inkster
+Copyright 2010, 2012 Toby Inkster
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
-=cut
+=head1 DISCLAIMER OF WARRANTIES
+
+THIS PACKAGE IS PROVIDED "AS IS" AND WITHOUT ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
+MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+
